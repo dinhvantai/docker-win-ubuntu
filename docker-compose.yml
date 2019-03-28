@@ -1,0 +1,74 @@
+version: '3'
+
+services:
+  application:
+    container_name: win_application
+    image: debian
+    volumes:
+      - ./mounted:/var/www
+  workspace:
+    container_name: win_workspace
+    restart: always
+    image: dinhtai/laravel-workspace
+    depends_on:
+      - application
+    tty: true
+  php-fpm:
+    container_name: win_php-fpm
+    restart: always
+    image: dinhtai/laravel-php-fpm
+    depends_on:
+      - application
+    expose:
+      - "9000"
+    links:
+      - workspace
+  nginx:
+    container_name: win_nginx
+    restart: always
+    image: dinhtai/laravel-nginx
+    volumes:
+      - ./nginx-conf:/etc/nginx/conf.d
+      - ./mounted:/var/www/
+    depends_on:
+      - data
+      - logs
+      - application
+    ports:
+      - "2020:80"
+    links:
+      - php-fpm
+  data:
+    container_name: win_data
+    image: debian
+    volumes:
+      - .docker/mysql:/var/lib/mysql
+      - .docker/data:/data
+  logs:
+    container_name: win_logs
+    image: debian
+    volumes:
+      - .docker/logs/nginx:/var/log/nginx
+      #- .docker/logs/mongodb:/var/log/mongodb
+  mysql:
+    container_name: win_mysql
+    restart: always
+    image: mysql:5.7
+    depends_on:
+      - data
+      - logs
+    expose:
+      - "3306"
+    environment:
+      MYSQL_DATABASE: win
+      MYSQL_USER: win
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: root
+  redis:
+    container_name: win_redis
+    restart: always
+    image: redis
+    expose:
+      - "6379"
+    depends_on:
+      - data
